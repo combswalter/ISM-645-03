@@ -2,6 +2,8 @@
 library(tidyverse)
 library(factoextra)
 library(factoextra)
+library(openxlsx)
+
 
 #-------
 #Realtor State Data
@@ -228,6 +230,9 @@ realstate_state <- read.csv('RDC_Inventory_Core_Metrics_State_History.csv')
 head(realstate_state)
 summary(realstate_state)
 
+realstate_state<-realstate_state[realstate_state$quality_flag == 0,]
+  
+
 
 NC_history <- realstate_state[realstate_state$state_id == 'NC',]
 NC_history
@@ -241,13 +246,33 @@ ggplot(NC_history, aes(x=month_date_yyyymm, y=average_listing_price))+
   geom_point()+
   labs(title = "NC Average listing price History")
 
-ggplot(NC_history, aes(x=month_date_yyyymm, y=average_listing_price))+
+ggplot(NC_history, aes(x=month_date_yyyymm, y=active_listing_count))+
   geom_point()+
-  labs(title = "NC Average listing price History")
+  labs(title = "NC Active Listing Count History")
 
-ggplot(NC_history, aes(x=month_date_yyyymm, y=average_listing_price))+
+ggplot(NC_history, aes(x=month_date_yyyymm, y=median_days_on_market))+
   geom_point()+
-  labs(title = "NC Average listing price History")
+  labs(title = "NC Median Days on market History")
+
+ggplot(NC_history, aes(x=month_date_yyyymm, y=price_increased_count))+
+  geom_point()+
+  labs(title = "NC Price Increased count history")
+
+ggplot(NC_history, aes(x=month_date_yyyymm, y=price_reduced_count))+
+  geom_point()+
+  labs(title = "NC Price Reduced Count History")
+
+#-------------------------------------------------------------------------
+
+library(openxlsx)
+
+zillow <-read.xlsx("Archived Zillow Data.xlsx")
+
+head(zillow)
+summary(zillow)
+
+
+
 
 
   
