@@ -390,4 +390,47 @@ ggplot(NC_Zillow, aes(x=Date, y=index))+
        
 
 
+#---------------------------------------------------
+
+#Overall Trend
+
+library(readxl)
+
+#Selectin all the variables avaliably by year to see how the affect the case shiller pricing index
+
+Mortgage <- read_excel("30 Year Fixed Mortgage Rate Historic Table (FreddieMac)xls.xlsx")
+Ownership <-read_excel("Home Ownership Rates - US Census (tidied).xlsx")
+Inventory<-read_excel("Housing Inventory - US Census (tidied).xlsx")
+Case_Shiller <-read_csv("S&P_Case-Shiller US National Home Price Index (St Lous FRED)-tidied.csv")
+
+Yearly_ownership<-Ownership%>%
+  group_by(Year)%>%
+  summarize(Rate=mean(Rate))
+
+head(Case_Shiller)
+
+Yearly_Case <- Case_Shiller%>%
+  transmute(Year, Price_Index)
+
+Yearly_Case<-Yearly_Case%>%
+  group_by(Year)%>%
+  summarize(In=mean(Price_Index))
+
+
+#Cleaned and Grouped by year dataframes 
+
+head(Mortgage)
+head(Yearly_ownership)
+head(Inventory)
+head(Yearly_Case)
+
+#Merging variables 
+df<- Mortgage %>% inner_join(Yearly_ownership,by="Year")%>%
+  inner_join(Inventory,by="Year")%>%
+  inner_join(Yearly_Case,by="Year")
+
+
+#Regression
+regression10<- lm(In~.-Year,data = df )
+summary(regression10)
 
