@@ -5,7 +5,7 @@ library(factoextra)
 library(openxlsx)
 
 
-#-------
+#----------------------------------------------------------
 #Realtor State Data
 
 realstate_state <- read.csv('RDC_Inventory_Core_Metrics_State_History.csv')
@@ -120,7 +120,7 @@ summary(regression8)
 #Found that variables for SQFT Price, median days in market and Sqft seems to be
 #the stronger predictors based on R squared data (Althought not extremely significant)
 
-regression9 <- lm(sqft_price~mdm+sqft,data = agregatte )
+regression9 <- lm(sqft_price~log(mdm)+log(sqft),data = agregatte )
 summary(regression9)
 
 set.seed(645) 
@@ -131,12 +131,14 @@ total_clusters <- agregatte%>%
   drop_na
 total_clusters
 
+#--------------------------------------------------------- 
+
 #mdm relationships
 mdm_agreggate <- agregatte%>%
   select(sqft_price,mdm)%>%
   drop_na
 
-result<-kmeans(mdm_agreggate, centers = 4, iter.max = 10, nstart = 25)
+mdm_result<-kmeans(mdm_agreggate, centers = 4, iter.max = 10, nstart = 25)
 
 fviz_nbclust(mdm_agreggate, kmeans, method = "wss") +
 labs(subtitle = "Elbow method")
@@ -145,19 +147,19 @@ fviz_nbclust(mdm_agreggate, kmeans, method = "silhouette") +
 labs(subtitle = "Silhouette method")
 
 mdm_cluster_Agreggate <- total_clusters %>% 
-mutate(cluster_kmeans = result$cluster)
+mutate(cluster_kmeans = mdm_result$cluster)
 
-#North Carolina on cluster #3
-mdm_cluster_Agreggate[mdm_cluster_Agreggate$state== "North Carolina",]
+# Cluster Identification
+mdm_cluster_Num<- mdm_cluster_Agreggate[mdm_cluster_Agreggate$state== "North Carolina",]
 
-nc_mdm_cluster<- mdm_cluster_Agreggate[mdm_cluster_Agreggate$cluster_kmeans== 3,]
+nc_mdm_cluster<- mdm_cluster_Agreggate[mdm_cluster_Agreggate$cluster_kmeans== mdm_cluster_Num$cluster_kmeans,]
 
 ggplot(mdm_cluster_Agreggate, aes(x=sqft_price, y=mdm)) + 
   geom_point(size=3, aes(color=cluster_kmeans))+
   labs(title = "Median Day Market State Clustering")
 
 
-
+#----------------------------------------------------------
 
 
 #sqft relationships
@@ -181,13 +183,15 @@ sqft_cluster_Agreggate <- total_clusters %>%
 
 
 #North Carolina on cluster #2
-sqft_cluster_Agreggate[sqft_cluster_Agreggate$state== "North Carolina",]
+sqft_cluster_Num<- sqft_cluster_Agreggate[sqft_cluster_Agreggate$state== "North Carolina",]
 
-nc_sqft_cluster<- sqft_cluster_Agreggate[sqft_cluster_Agreggate$cluster_kmeans== 2,]
+nc_sqft_cluster<- sqft_cluster_Agreggate[sqft_cluster_Agreggate$cluster_kmeans== sqft_cluster_Num$cluster_kmeans,]
 
 ggplot(sqft_cluster_Agreggate, aes(x=sqft_price, y=sqft)) + 
   geom_point(size=3, aes(color=cluster_kmeans))+
   labs(title = "SQFT State Clustering")
+
+#----------------------------------------------------------
 
 #Clustering based on both variables 
 
@@ -209,60 +213,155 @@ total_cluster_Agreggate <- total_clusters %>%
   mutate(cluster_kmeans = result$cluster)
 
 #North Carolina on cluster #2
-total_cluster_Agreggate[total_cluster_Agreggate$state== "North Carolina",]
+total_cluster_Num<-total_cluster_Agreggate[total_cluster_Agreggate$state== "North Carolina",]
 
-nc_total_cluster<- total_cluster_Agreggate[total_cluster_Agreggate$cluster_kmeans== 2,]
+nc_total_cluster<- total_cluster_Agreggate[total_cluster_Agreggate$cluster_kmeans== total_cluster_Num$cluster_kmeans,]
 
 ggplot(total_cluster_Agreggate, aes(x=sqft, y=mdm)) + 
   geom_point(size=3, aes(color=cluster_kmeans))+
   labs(title = "Both Variables State Clustering")
 
-#There is a relationship btween mdm and sqft
+
+#There is a relationship between median days in the market and sqft?
 
 regression10<- lm(sqft~mdm,data = agregatte )
 summary(regression10)
 
 #----------------------------------------------------------
-#Realtor County 
+#Cluster Comparison
 
+#MDM Cluster
+nc_mdm_cluster
+
+
+
+
+#SQFT Cluster
+nc_sqft_cluster
+
+#Total Cluster
+nc_total_cluster
+
+#Here we are checking the intersection of similar states shared by the 3 clusters 
+
+common_elements <- Reduce(intersect, list(nc_mdm_cluster$state, nc_sqft_cluster$state, nc_total_cluster$state)) 
+
+
+#Common Elements 
+#Colorado 
+#Idaho
+#Montana 
+#North Carolina 
+
+#----------------------------------------------------------
+#Common Cluster Analysis
+
+common_cluster <- agregatte[agregatte$state %in% c(common_elements), ]  
+common_cluster
+
+ggplot(common_cluster , aes(x=sqft, y=sqft_price)) + 
+  geom_point(size=3)+
+  geom_text(aes(label = state), size=4)
+
+ggplot(common_cluster , aes(x=mdm, y=sqft_price)) + 
+  geom_point(size=3)+
+  geom_text(aes(label = state), size=4)
+
+ggplot(common_cluster , aes(x=mdm, y=sqft)) + 
+  geom_point(size=3)+
+  geom_text(aes(label = state), size=4)
+
+#----------------------------------------------------------
+      
+
+
+
+
+#----------------------------------------------------------
+#Realtor State history (Evolution of studied variables on previous regresssions)
+#for NC and the states clustered allongside it
 
 realstate_state <- read.csv('RDC_Inventory_Core_Metrics_State_History.csv')
 head(realstate_state)
 summary(realstate_state)
 
 realstate_state<-realstate_state[realstate_state$quality_flag == 0,]
-  
 
 
 NC_history <- realstate_state[realstate_state$state_id == 'NC',]
-NC_history
+
+Colorado_history <- realstate_state[realstate_state$state_id == 'CO',]
+
+Idaho_history <- realstate_state[realstate_state$state_id == 'ID',]
+
+Montana_history <- realstate_state[realstate_state$state_id == 'MT',] 
+
+clustered_history <- realstate_state[realstate_state$state_id %in% c('NC','CO','ID', 'MT'),]
+clustered_history
+
+
+#Listing Price 
 
 ggplot(NC_history, aes(x=month_date_yyyymm, y=median_listing_price))+
-  geom_point()+
+  geom_point(aes(color=state_id))+
   labs(title = "NC Median Listing price history")
 
+ggplot(clustered_history, aes(x=month_date_yyyymm, y=median_listing_price))+
+  geom_point(aes(color=state_id))+
+  labs(title = "Clustered Median Listing price history")
 
+
+#Average Listing Price 
 ggplot(NC_history, aes(x=month_date_yyyymm, y=average_listing_price))+
   geom_point()+
   labs(title = "NC Average listing price History")
 
+ggplot(clustered_history, aes(x=month_date_yyyymm, y=average_listing_price))+
+  geom_point(aes(color=state_id))+
+  labs(title = "Clustered Average listing price History")
+
+
+#Active Count 
 ggplot(NC_history, aes(x=month_date_yyyymm, y=active_listing_count))+
   geom_point()+
   labs(title = "NC Active Listing Count History")
+
+ggplot(clustered_history, aes(x=month_date_yyyymm, y=active_listing_count))+
+  geom_point(aes(color=state_id))+
+  labs(title = "Clustered Active Listing Count History")
+
+#Median Days on market
 
 ggplot(NC_history, aes(x=month_date_yyyymm, y=median_days_on_market))+
   geom_point()+
   labs(title = "NC Median Days on market History")
 
+ggplot(clustered_history, aes(x=month_date_yyyymm, y=median_days_on_market))+
+  geom_point(aes(color=state_id))+
+  labs(title = "Clustered Median Days on market History")
+
+#Price Increase Count
+
 ggplot(NC_history, aes(x=month_date_yyyymm, y=price_increased_count))+
   geom_point()+
   labs(title = "NC Price Increased count history")
+
+ggplot(clustered_history, aes(x=month_date_yyyymm, y=price_increased_count))+
+  geom_point(aes(color=state_id))+
+  labs(title = "Clustered Price Increased count history")
+#Price reduced count
 
 ggplot(NC_history, aes(x=month_date_yyyymm, y=price_reduced_count))+
   geom_point()+
   labs(title = "NC Price Reduced Count History")
 
-#-------------------------------------------------------------------------
+ggplot(clustered_history, aes(x=month_date_yyyymm, y=price_reduced_count))+
+  geom_point(aes(color=state_id))+
+  labs(title = "Clustered Price Reduced Count History")
+
+
+
+#----------------------------------------------------------
 
 library(openxlsx)
 
@@ -271,12 +370,21 @@ zillow <-read.xlsx("Archived Zillow Data.xlsx")
 head(zillow)
 summary(zillow)
 
+zillow<-zillow%>%
+  mutate(index = zillow$`Home.Value.Index.Monthly.by.State.(all.homes)`)%>%
+  select(Date, RegionName, index)
 
+head(zillow)
 
+grouped<-zillow%>%
+  group_by(RegionName)
 
-
+NC_Zillow<-zillow[zillow$RegionName== 'North Carolina',]
+head(NC_Zillow)
   
-  
+ggplot(NC_Zillow, aes(x=Date, y=index))+
+  geom_point()+
+  labs(title = "NC Zillow value Index")
 
 
        
