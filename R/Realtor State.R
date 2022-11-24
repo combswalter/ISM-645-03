@@ -278,8 +278,8 @@ ggplot(common_cluster , aes(x=mdm, y=sqft)) +
 
 
 #----------------------------------------------------------
-#Realtor State history (Evolution of studied variables on previous regresssions)
-#for NC and the states clustered allongside it
+#Realtor State history (Evolution of studied variables on previous regressions)
+#for NC and the states clustered alongside it
 
 realstate_state <- read.csv('RDC_Inventory_Core_Metrics_State_History.csv')
 head(realstate_state)
@@ -429,8 +429,132 @@ df<- Mortgage %>% inner_join(Yearly_ownership,by="Year")%>%
   inner_join(Inventory,by="Year")%>%
   inner_join(Yearly_Case,by="Year")
 
+summary(df)
 
-#Regression
-regression10<- lm(In~.-Year,data = df )
-summary(regression10)
+df<- df %>% 
+  rename("AVG_mortge_rate"="Rate (avg)" ,
+         "AVG_mortge_points" ="Points (avg)" ,
+         "ownership_rate"= "Rate" ,
+         "housing_inventory"="All Housing Units",
+         "vacant_housing_inventory"="Vacant Housing Units",
+         "Occupied_housing_inventory"="Total Occupied Housing Units",
+         "shiller_case_index"="In"
+         ) 
+
+
+Shiller_regression1<- lm(shiller_case_index ~ AVG_mortge_rate,data = df )
+summary(Shiller_regression1)
+
+Shiller_regression2<- lm(shiller_case_index~AVG_mortge_points,data = df )
+summary(Shiller_regression2)
+
+Shiller_regression3<- lm(shiller_case_index~ownership_rate,data = df )
+summary(Shiller_regression3)
+
+Shiller_regression4<- lm(shiller_case_index~housing_inventory,data = df )
+summary(Shiller_regression4)
+
+Shiller_regression5<- lm(shiller_case_index~vacant_housing_inventory,data = df )
+summary(Shiller_regression5)
+
+Shiller_regression6<- lm(shiller_case_index~Occupied_housing_inventory,data = df )
+summary(Shiller_regression6)
+
+
+ggplot(df, aes(y=shiller_case_index, x=AVG_mortge_rate))+
+  geom_point()+
+  geom_smooth(method="lm", se=FALSE, color="blue")+
+  labs(title = "Shiller Index vs Mortgage Rate", subtitle="Data Visualization", 
+       x="Shiller Index", y="Mortgage Rate")
+
+ggplot(df, aes(y=shiller_case_index, x=Occupied_housing_inventory))+
+  geom_point()+
+  geom_smooth(method="lm", se=FALSE, color="blue")+
+  labs(title = "Shiller Index vs Occupied Housing Inventory", subtitle="Data Visualization", 
+       x="Shiller Index", y="Occupied Housing Inventory")
+
+#Results of each predictor analyzed individually for the Case Shiller Price Index
+
+#Predictor                Estimate    Std. Error    t value   Pr(>|t|)       Adjusted R-squared 
+#AVG_mortgage_rate         -23.052     3.155       -7.306     9.29e-08 ***   0.6598 
+#AVG_mortgage_points       -84.36      14.68       - 5.746    4.75e-06 ***   0.5425 
+#ownership_rate            -2.138      5.303       -0.403     0.690         -0.03201 
+#housing_inventory          4.706e-06  4.394e-07    10.711    4.98e-11 ***   0.8081 
+#vacant_housing_inventory   1.263e-05  3.766e-06    3.355     0.00245 **     0.2753
+#Occupied_housing_inventory 5.595e-06  4.870e-07    11.487      1.10e-11 *** 0.8291 
+
+
+#Seem like for the Case Shiller Index the Mortgage rate and the Occupied Housing inventory 
+#are the the most telling variables 
+
+Shiller_regression6<- lm(shiller_case_index~AVG_mortge_rate+Occupied_housing_inventory,data = df )
+summary(Shiller_regression6)
+
+#------------------------------------------------
+#checking with north carolina prices
+
+Charlotte_Case_Shiller <-read_csv("CRXRNSA.csv")
+ head(Charlotte_Case_Shiller)
+ 
+ 
+ Charlotte_Case_Shiller  <- Charlotte_Case_Shiller %>%
+   transmute(Year, CRXRNSA)
+ 
+ Charlotte_Case_Shiller<- Charlotte_Case_Shiller%>%
+   group_by(Year)%>%
+   summarize(In=mean(CRXRNSA))
+ 
+ 
+ 
+ Chalotte_df<- Mortgage %>% inner_join(Yearly_ownership,by="Year")%>%
+   inner_join(Inventory,by="Year")%>%
+   inner_join((Charlotte_Case_Shiller),by="Year")
+ 
+ 
+
+ Charlotte_df<-  Chalotte_df%>% 
+  rename("AVG_mortge_rate"="Rate (avg)" ,
+         "AVG_mortge_points" ="Points (avg)" ,
+         "ownership_rate"= "Rate" ,
+         "housing_inventory"="All Housing Units",
+         "vacant_housing_inventory"="Vacant Housing Units",
+         "Occupied_housing_inventory"="Total Occupied Housing Units",
+         "chlt_shiller_case_index"="In"
+  ) 
+ #Results of Mortgage Rate and Occupied Housing Inventory for the Charlotte Case Shiller Price Index
+ Shiller_regression7<- lm(chlt_shiller_case_index  ~AVG_mortge_rate + Occupied_housing_inventory,data =  Charlotte_df )
+ summary(Shiller_regression7)
+ 
+ 
+ 
+ #Results of Mortgage Rate and Occupied Housing Inventory for the Charlotte Case Shiller Price Index
+ 
+ # Coefficients:
+ #                             Estimate Std. Error t value Pr(>|t|)    
+ # (Intercept)                -4.820e+02  8.025e+01  -6.006 2.84e-06 ***
+ # AVG_mortge_rate             7.439e+00  2.725e+00   2.730   0.0114 *  
+ # Occupied_housing_inventory  5.051e-06  5.934e-07   8.513 7.43e-09 ***
+   ---
+ 
+ #Residual standard error: 9.257 on 25 degrees of freedom
+ #Multiple R-squared:  0.9062,	Adjusted R-squared:  0.8987 
+ #3F-statistic: 120.7 on 2 and 25 DF,  p-value: 1.424e-13
+
+
+ 
+ 
+ 
+ ggplot( Charlotte_df, aes(y=chlt_shiller_case_index, x=AVG_mortge_rate))+
+   geom_point()+
+   geom_smooth(method="lm", se=FALSE, color="blue")+
+   labs(title = "Charlotte-Shiller Index Index vs Mortgage Rate", subtitle="Data Visualization", 
+        x="Shiller Index", y="Mortgage Rate")
+ 
+ ggplot( Charlotte_df, aes(y=chlt_shiller_case_index, x=Occupied_housing_inventory))+
+   geom_point()+
+   geom_smooth(method="lm", se=FALSE, color="blue")+
+   labs(title = "Charlotte-Shiller Index vs Occupied Housing Inventory", subtitle="Data Visualization", 
+        x="Shiller Index", y="Occupied Housing Inventory")
+
+
 
