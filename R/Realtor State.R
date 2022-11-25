@@ -3,7 +3,7 @@ library(tidyverse)
 library(factoextra)
 library(factoextra)
 library(openxlsx)
-
+library(zoo)
 
 #----------------------------------------------------------
 #Realtor State Data
@@ -244,9 +244,10 @@ nc_total_cluster
 
 #Here we are checking the intersection of similar states shared by the 3 clusters 
 
-common_elements <- Reduce(intersect, list(nc_mdm_cluster$state, nc_sqft_cluster$state, nc_total_cluster$state)) 
+common_elements <- Reduce(intersect, list(nc_mdm_cluster$state, nc_sqft_cluster$state, 
+                  nc_total_cluster$state)) 
 
-
+common_elements
 #Common Elements 
 #Colorado 
 #Idaho
@@ -287,6 +288,10 @@ summary(realstate_state)
 
 realstate_state<-realstate_state[realstate_state$quality_flag == 0,]
 
+realstate_state$Years <-substr(realstate_state$month_date_yyyymm, 1, 4)
+realstate_state$Months<-substr(realstate_state$month_date_yyyymm,5, 6)
+
+realstate_state$date <-as.Date(paste(realstate_state$Years, realstate_state$Months, 1, sep = "-"))
 
 NC_history <- realstate_state[realstate_state$state_id == 'NC',]
 
@@ -302,60 +307,60 @@ clustered_history
 
 #Listing Price 
 
-ggplot(NC_history, aes(x=month_date_yyyymm, y=median_listing_price))+
+ggplot(NC_history, aes(x=date, y=median_listing_price))+
   geom_point(aes(color=state_id))+
   labs(title = "NC Median Listing price history")
 
-ggplot(clustered_history, aes(x=month_date_yyyymm, y=median_listing_price))+
+ggplot(clustered_history, aes(x=date, y=median_listing_price))+
   geom_point(aes(color=state_id))+
   labs(title = "Clustered Median Listing price history")
 
 
 #Average Listing Price 
-ggplot(NC_history, aes(x=month_date_yyyymm, y=average_listing_price))+
+ggplot(NC_history, aes(x=date, y=average_listing_price))+
   geom_point()+
   labs(title = "NC Average listing price History")
 
-ggplot(clustered_history, aes(x=month_date_yyyymm, y=average_listing_price))+
+ggplot(clustered_history, aes(x=date, y=average_listing_price))+
   geom_point(aes(color=state_id))+
   labs(title = "Clustered Average listing price History")
 
 
 #Active Count 
-ggplot(NC_history, aes(x=month_date_yyyymm, y=active_listing_count))+
+ggplot(NC_history, aes(x=date, y=active_listing_count))+
   geom_point()+
   labs(title = "NC Active Listing Count History")
 
-ggplot(clustered_history, aes(x=month_date_yyyymm, y=active_listing_count))+
+ggplot(clustered_history, aes(x=date, y=active_listing_count))+
   geom_point(aes(color=state_id))+
   labs(title = "Clustered Active Listing Count History")
 
 #Median Days on market
 
-ggplot(NC_history, aes(x=month_date_yyyymm, y=median_days_on_market))+
+ggplot(NC_history, aes(x=date, y=median_days_on_market))+
   geom_point()+
   labs(title = "NC Median Days on market History")
 
-ggplot(clustered_history, aes(x=month_date_yyyymm, y=median_days_on_market))+
+ggplot(clustered_history, aes(x=date, y=median_days_on_market))+
   geom_point(aes(color=state_id))+
   labs(title = "Clustered Median Days on market History")
 
 #Price Increase Count
 
-ggplot(NC_history, aes(x=month_date_yyyymm, y=price_increased_count))+
+ggplot(NC_history, aes(x=date, y=price_increased_count))+
   geom_point()+
   labs(title = "NC Price Increased count history")
 
-ggplot(clustered_history, aes(x=month_date_yyyymm, y=price_increased_count))+
+ggplot(clustered_history, aes(x=date, y=price_increased_count))+
   geom_point(aes(color=state_id))+
   labs(title = "Clustered Price Increased count history")
 #Price reduced count
 
-ggplot(NC_history, aes(x=month_date_yyyymm, y=price_reduced_count))+
+ggplot(NC_history, aes(x=date, y=price_reduced_count))+
   geom_point()+
   labs(title = "NC Price Reduced Count History")
 
-ggplot(clustered_history, aes(x=month_date_yyyymm, y=price_reduced_count))+
+ggplot(clustered_history, aes(x=date, y=price_reduced_count))+
   geom_point(aes(color=state_id))+
   labs(title = "Clustered Price Reduced Count History")
 
@@ -555,6 +560,36 @@ Charlotte_Case_Shiller <-read_csv("CRXRNSA.csv")
    geom_smooth(method="lm", se=FALSE, color="blue")+
    labs(title = "Charlotte-Shiller Index vs Occupied Housing Inventory", subtitle="Data Visualization", 
         x="Shiller Index", y="Occupied Housing Inventory")
+ library(forecast)
+ 
+ library("xts")
+ glimpse(df)
+ 
+ df$Year<-as.Date(paste(df$Year, 1, 1, sep = "-"))
+
+ Mortgage<-df%>%
+   select(Year,AVG_mortge_rate )
+ 
+ Occupied<-df%>%
+   select(Year,Occupied_housing_inventory )
+ 
+ f_Mortgage <- xts( Occupied$Occupied_housing_inventory, Occupied$Year)
+
+ 
+start(f_Mortgage )
+plot(f_Mortgage )
+
+tsdata <- ts(f_Mortgage, frequency = 1) 
+
+ddata <- decompose(f_Mortgage, "multiplicative")
+
+plot(ddata)
 
 
+NC_history <- realstate_state[realstate_state$state_id == 'NC',]
 
+Colorado_history <- realstate_state[realstate_state$state_id == 'CO',]
+
+Idaho_history <- realstate_state[realstate_state$state_id == 'ID',]
+
+Montana_history <- realstate_state[realstate_state$state_id == 'MT',] 
